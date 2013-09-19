@@ -1,0 +1,164 @@
+% preamble
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{tensor}[2012/06/15 Tensorial indices]
+
+% spacer between sequences of indices
+\newcommand*\tsr@spacer{\mkern-1mu\vphantom{bq}}
+
+% struts
+\newcommand*\tsr@strutu{{}}
+\newcommand*\tsr@strutd{{}}
+% superscript and subscript characters used only for struts
+\let\tsr@strutsp^
+\let\tsr@strutsb_
+
+% utility macros
+\newcommand*\tsr@output{\addto@hook\@temptokena}
+\newcommand*\tsr@aroundone[2]{#1{#2}}
+\newcommand*\tsr@aroundtwo[3]{#1{#2#3}}
+\newcommand*\tsr@ifempty[3]{\ifx\@empty#1\@empty#2\else#3\fi}
+
+% index-scanner state
+%   state 0: no script
+%   state 1: dangling superscript
+%   state 2: dangling subscript
+%   state 3: dangling prime
+%   state 4: subscript under prime
+\newcount\tsr@state
+
+% prime character (not the plain TeX macro)
+\let\tsr@prime'
+
+% main tensor macro
+% detects primes in the kernel and moves them to the index part
+\begingroup\catcode`'\active
+  \gdef\tensor#1#2{
+    \begingroup
+      \def\@tempa{{\begingroup\def'{}#1\endgroup}}
+      \begingroup
+        \def'{\g@addto@macro\@tempa\tsr@prime}
+        \setbox\@tempboxa\hbox{\ensuremath{#1}}
+      \endgroup
+      \@temptokena{}
+      \expandafter\tsr@scan\@tempa#2\tsr@end
+    \endgroup
+  }
+\endgroup
+
+% index scanner
+\newcommand*\tsr@scan[1]{
+  \ifx^#1
+    \ifcase\tsr@state
+      \tsr@output{^\bgroup}
+    \or\or
+      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu\tsr@spacer^\bgroup}
+    \or
+      \tsr@output{\tsr@spacer^\bgroup}
+    \or
+      \tsr@output{\tsr@strutd\egroup\tsr@spacer^\bgroup}
+    \fi
+    \tsr@state1
+  \else\ifx_#1
+    \ifcase\tsr@state
+      \tsr@output{_\bgroup}
+    \or
+      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd\tsr@spacer_\bgroup}
+    \or\or
+      \tsr@output{_\bgroup}
+    \or
+      \tsr@output{\tsr@strutd\egroup\tsr@spacer_\bgroup}
+    \fi
+    \ifnum\tsr@state=3
+      \tsr@state4
+    \else
+      \tsr@state2
+    \fi
+  \else\ifx'#1
+    \ifcase\tsr@state
+      \tsr@output{'}
+    \or
+      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd\tsr@spacer'}
+    \or
+      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu\tsr@spacer'}
+    \or
+      \tsr@output{'}
+    \or
+      \tsr@output{\tsr@strutd\egroup\tsr@spacer'}
+    \fi
+    \tsr@state3
+  \else\ifx\tsr@end#1
+    \ifcase\tsr@state\or
+      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd}
+    \or
+      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu}
+    \or\or
+      \tsr@output{\tsr@strutd\egroup}
+    \fi
+    \tsr@state0
+  \else
+    \tsr@output{#1}
+  \fi\fi\fi\fi
+  \ifx\tsr@end#1
+    \the\@temptokena
+  \else
+    \expandafter\tsr@scan
+  \fi
+}
+
+% tensor prototypes
+\newcommand*\tsr@tensoru[2]{\tsr@ifempty{#2}{#1}{\tensor{#1}{^{#2}}}}
+\newcommand*\tsr@tensord[2]{\tsr@ifempty{#2}{#1}{\tensor{#1}{_{#2}}}}
+\newcommand*\tsr@tensorud[3]{\tsr@ifempty{#2#3}{#1}{\tensor{#1}{^{#2}_{#3}}}}
+\newcommand*\tsr@tensordu[3]{\tsr@ifempty{#2#2}{#1}{\tensor{#1}{_{#2}^{#3}}}}
+
+% commands for declaring tensors
+\newcommand*\DeclareSimpleTensor[3]{
+  \ifcase#3
+  \or
+    \DeclareRobustCommand#1{\@ifstar
+      {\tsr@aroundone{\tsr@tensoru{#2}}}
+      {\tsr@aroundone{\tsr@tensord{#2}}}%
+    }    
+  \or
+    \DeclareRobustCommand#1{\@ifstar
+      {\tsr@aroundtwo{\tsr@tensoru{#2}}}
+      {\tsr@aroundtwo{\tsr@tensord{#2}}}%
+    }
+  \fi
+}
+\DeclareRobustCommand\DeclareMixedTensor{
+  \@ifstar\tsr@declaretensordu\tsr@declaretensorud
+}
+\newcommand*\tsr@declaretensorud[2]{\newcommand*#1{\tsr@tensorud{#2}}}
+\newcommand*\tsr@declaretensordu[2]{\newcommand*#1{\tsr@tensordu{#2}}}
+\newcommand*\DeclareTensorOperator[2]{
+  \DeclareRobustCommand#1{\@ifstar{\tsr@tensoru{#2}}{\tsr@tensord{#2}}}
+}
+
+% predefined tensors
+\DeclareSimpleTensor\basis{\vec e}1
+\DeclareSimpleTensor\kron\delta1
+\DeclareSimpleTensor\metric g2
+\DeclareSimpleTensor\emetric\delta2
+\DeclareSimpleTensor\mmetric\eta2
+\DeclareSimpleTensor\levi\epsilon1
+\DeclareSimpleTensor\levit{\bar\epsilon}1
+\DeclareSimpleTensor\ricci R2
+\DeclareSimpleTensor\einst G2
+
+\DeclareMixedTensor\kronm\delta
+\DeclareMixedTensor\jacob J
+\DeclareMixedTensor*\invjacob{\smash{\tilde J}}
+\DeclareMixedTensor\lorentz\Lambda
+\DeclareMixedTensor*\invlorentz{\smash{\tilde\Lambda}}
+
+\DeclareTensorOperator\pard\partial
+
+% special tensors
+\newcommand*\chrsym[3]{\tsr@tensorud\Gamma{#1}{#2#3}}
+\DeclareRobustCommand\riemann{\@ifstar\tsr@riemannd\tsr@riemannud}
+\newcommand*\tsr@riemannud[4]{\tsr@tensorud R{#1}{#2#3#4}}
+\newcommand*\tsr@riemannd[4]{\tsr@tensord R{#1#2#3#4}}
+\DeclareRobustCommand\covd{\@ifstar\tsr@covdu\tsr@covdd}
+\newcommand*\tsr@covdd[1]{\tsr@tensord\nabla{\mkern-3mu#1}\mkern1mu}
+\newcommand*\tsr@covdu[1]{\tsr@tensoru\nabla{#1}}
