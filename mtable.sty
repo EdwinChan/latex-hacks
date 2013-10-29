@@ -1,0 +1,84 @@
+% preamble
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mtable}[2013/10/23 Table for displaying math]
+% packages
+\RequirePackage{etoolbox}
+% lengths
+\newlength\rowskip\rowskip2\jot
+\newlength\rulesep\rulesep.6\rowskip
+% compatibility with tabular
+\newcommand*\mtb@modifytabularcr{%
+  % allow starred line separator to ignore row skip
+  \patchcmd\@tabularcr
+    {\@ifstar\@xtabularcr\@xtabularcr}{\@ifstar\mtb@xtabularcr\@xtabularcr}{}{}%
+  % save original command
+  \let\mtb@xtabularcr\@xtabularcr
+  % add default fixed skip after each row
+  \patchcmd\@xtabularcr\cr{\cr\noalign{\vskip\rowskip}}{}{}}
+% compatibility with array
+\newcommand*\mtb@modifyarraycr{%
+  % allow starred line separator to ignore row skip
+  \patchcmd\@arraycr
+    {\@ifstar\@xarraycr\@xarraycr}{\@ifstar\mtb@xarraycr\@xarraycr}{}{}%
+  % save original command
+  \let\mtb@xarraycr\@xarraycr
+  % add default fixed skip after each row
+  \patchcmd\@xarraycr\cr{\cr\noalign{\vskip\rowskip}}{}{}}
+% compatibility with hline
+\newcommand*\mtb@modifyhline{%
+  % remove skip from above line
+  \patchcmd\hline\ifnum{\vskip-\rulesep\ifnum}{}{}%
+  % add removed skip under line
+  \patchcmd\@xhline\ifnum{\vskip\rulesep\ifnum}{}{}}
+% compatibility with booktabs
+\newcommand*\mtb@modifybooktabs{%
+  % move rule downward
+  \aboverulesep-\rulesep\belowrulesep\rulesep}
+% compatibility with amsmath
+\newcommand*\mtb@modifyamsmath{%
+  % prevent effects from propagating into matrices
+  \pretocmd\env@matrix{\rowskip\z@}{}{}}
+% modification commands
+\newcommand*\mtb@modify{\mtb@modifyhline}
+\@ifpackageloaded{array}
+  {\apptocmd\mtb@modify\mtb@modifyarraycr{}{}}
+  {\apptocmd\mtb@modify\mtb@modifytabularcr{}{}}
+\@ifpackageloaded{booktabs}
+  {\apptocmd\mtb@modify\mtb@modifybooktabs{}{}}{}
+\@ifpackageloaded{amsmath}
+  {\apptocmd\mtb@modify\mtb@modifyamsmath{}{}}{}
+% environments
+\newenvironment{mtabular}
+  % use display-style math (for which this environment is designed)
+  {\begingroup\addto@hook\everymath\displaystyle
+  % modify tabular and array environments as needed
+  \mtb@modify
+  % open and close environments
+  \begin{tabular}}{\end{tabular}\endgroup}
+\newenvironment{mtable}
+  % start with usual equation skip
+  {\begin{center}\vskip\abovedisplayskip
+  % open and close environments
+  \begin{mtabular}}{\end{mtabular}%
+  % end with usual equation skip
+  \end{center}\vskip\belowdisplayskip}
+\newenvironment{ltabular}
+  % space out lines slightly
+  {\begingroup\extrarowheight.5\rowskip\begin{tabular}}
+  {\end{tabular}\endgroup}
+\newenvironment{ltable}
+  % start with usual equation skip
+  {\begin{center}\vskip\abovedisplayskip
+  % open and close environments
+  \begin{ltabular}}{\end{ltabular}%
+  % end with usual equation skip
+  \end{center}\vskip\belowdisplayskip}
+\@ifpackageloaded{threeparttable}{
+  \newenvironment{mtable*}
+    % start with usual equation skip
+    {\begin{center}\vskip\abovedisplayskip
+    % add some space before table notes
+    \begin{threeparttable}\pretocmd\tablenotes\medskip{}{}}
+    % end with usual equation skip
+    {\end{threeparttable}\end{center}\vskip\belowdisplayskip}
+}{}

@@ -1,0 +1,67 @@
+% preamble
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{physics}[2012/06/17 Definitions for physics]
+% packages
+\RequirePackage{basic}
+
+% definition equal sign
+\let\eqdef\equiv
+% complex operators
+\let\Re\relax
+\let\Im\relax
+\DeclareMathOperator\Re{Re}
+\DeclareMathOperator\Im{Im}
+
+% differential with a bar
+\newcommand*\dbar{\mathrlap{\m@th\mkern3mu\mathchar"0016}d}
+% order of expansion
+\newcommand*\ord[1]{^{(#1)}}
+
+% d'Alembert operator
+\DeclareMathOperator\dalm\square
+% common physical constants
+\newcommand*\kB{k_\su B}
+\newcommand*\sigmaSB{\sigma_\su{SB}}
+\newcommand*\sigmaT{\sigma_\su T}
+\newcommand*\kappaT{\kappa_\su T}
+\newcommand*\prmt{\epsilon_0}
+\newcommand*\prmb{\mu_0}
+\newcommand*\econst{\frac1{4\pi|\prmt}}
+\newcommand*\mconst{\frac\prmb{4\pi}}
+\newcommand*\muB{\mu_\su B}
+
+% bra--ket notation
+\newcommand*\bra[1]{\langle#1\futurelet\@tempa\phy@checkket}
+\newcommand*\phy@checkket{\ifx\@tempa\ket\else\rvert\fi}
+\newcommand*\ket[1]{\lvert#1\rangle}
+% operator
+\let\op\hat
+% Hermitian adjoint
+\newcommand*\adj{^\dag}
+% commutator and anti-commutator
+\DeclarePairedDelimiterX\comm[2][]{#1,#2}
+\DeclarePairedDelimiterX\acmm[2]\{\}{#1,#2}
+% spin-up and spin-down
+\mathchardef\up"0222
+\mathchardef\down"0223
+
+% field-theory definitions
+\newcommand*\fvec[1]{\boldsymbol{\mathsf{#1}}}
+\newcommand*\ufvec[1]{\hat{\fvec{#1}}}
+\@ifpackageloaded{simplewick}{
+  \def\phy@split#1#2#3#4\@nil{\def#1{#3}\def#2{#4}}
+  \newcommand*\wick[2]{\begingroup
+    \phy@split\@tempc\@tempb#2\@nil
+    \phy@split\@tempa\@tempb#1\@nil
+    \contraction{\hskip-0.025em}{\@tempa\vphantom{\@tempc}}\@tempb\@tempc#1|#2%
+  \endgroup}
+}{}
+\@ifpackageloaded{tensor}{
+  \DeclareSimpleTensor\gmat\gamma1
+  \DeclareSimpleTensor\smat\sigma1
+  \DeclareSimpleTensor\sbmat{\bar\sigma}1
+}{}
+
+% elements and particles
+\let\element\textup
+\let\particle\textup

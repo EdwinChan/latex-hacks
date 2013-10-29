@@ -1,0 +1,265 @@
+% preamble
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{basic}[2013/10/27 Basic macros and definitions]
+% packages
+\RequirePackage{mathtools}
+
+% option: domains
+\DeclareOption{domains}{\AtEndOfPackage{
+  \RequirePackage{amsfonts}
+  \newcommand*\realnum{\mathbb R}
+  \newcommand*\cmplxnum{\mathbb C}
+  \newcommand*\naturnum{\mathbb N}
+  \newcommand*\primenum{\mathbb P}
+  \newcommand*\rationum{\mathbb Q}
+  \newcommand*\intgrnum{\mathbb Z}
+}}
+% options: sets
+\DeclareOption{sets}{\AtEndOfPackage{
+  \RequirePackage{amssymb}
+  \let\union\cup
+  \let\intersect\cap
+  \let\bigunion\bigcup
+  \let\bigintersect\bigcap
+  \let\emptyset\varnothing
+}}
+% option processing
+\ProcessOptions
+
+% utility macros
+\def\bsc@afterfi#1\fi{\fi#1}
+\newcommand*\bsc@append[2]{%
+  \@temptokena\expandafter{#1#2}\edef#1{\the\@temptokena}}
+\newcommand*\bsc@prepend[2]{%
+  \@temptokena{#2}%
+  \@temptokena\expandafter\expandafter\expandafter
+    {\expandafter\the\expandafter\@temptokena#1}%
+  \edef#1{\the\@temptokena}}
+\newcommand*\bsc@ifempty[3]{\ifx\@empty#1\@empty#2\else#3\fi}
+\newcommand*\bsc@ifstrcomp[4]{%
+  \def\@tempa{#1}\def\@tempb{#2}\ifx\@tempa\@tempb#3\else#4\fi}
+
+% if Computer Modern Roman is the default roman font
+\expandafter\bsc@ifstrcomp\expandafter{\rmdefault}{cmr}{
+  % use Latin Modern instead (package does not change \f@family automatically)
+  % \rmfamily ensures EC fonts are not loaded when font encoding is set to T1
+  \RequirePackage{lmodern}\rmfamily
+  \RequirePackage[T1]{fontenc}
+  % Greek letters for the default font
+  \providecommand*\Alpha{\mathrm A}
+  \providecommand*\Beta{\mathrm B}
+  \providecommand*\Epsilon{\mathrm E}
+  \providecommand*\Zeta{\mathrm Z}
+  \providecommand*\Eta{\mathrm H}
+  \providecommand*\Iota{\mathrm I}
+  \providecommand*\Kappa{\mathrm K}
+  \providecommand*\Mu{\mathrm M}
+  \providecommand*\Nu{\mathrm N}
+  \providecommand*\omicron o
+  \providecommand*\Omicron{\mathrm O}
+  \providecommand*\Rho{\mathrm P}
+  \providecommand*\Tau{\mathrm T}
+  \providecommand*\Chi{\mathrm X}
+}{}
+
+% definition sign
+\newcommand*\eqdef{\stackrel{\mathclap{\smash{\textnormal{def}}}}=}
+% equal sign replacements in align-like environments
+\newcommand*\noeq{\mathrel{\hphantom=}}
+\newcommand*\cont{\noeq\qquad{}}
+\newcommand*\alignrel[1]{\mathrel{\mathmakebox[\widthof=][c]{#1}}}
+
+% spacing
+\newcommand*\hairspace{
+  \mkern.5mu\nonscript\mskip.5mu\@plus.25mu\@minus.25mu\relax}
+\newcommand*\neghairspace{
+  \mkern-.5mu\nonscript\mskip-.5mu\@plus.25mu\@minus.25mu\relax}
+\begingroup\catcode`|\active
+  \gdef\bsc@usepipe{\everymath{\let|\hairspace}}
+  \global\let|\hairspace
+\endgroup\mathcode`|"8000
+% TikZ fix
+%\@ifpackageloaded{tikz}
+%  {\g@addto@macro\tikzpicture{\catcode`|\active\bsc@usepipe}}{}
+
+% trigonometric functions
+\DeclareMathOperator\sech{sech}
+\DeclareMathOperator\csch{csch}
+\DeclareMathOperator\arcsec{arcsec}
+\DeclareMathOperator\arccsc{arccsc}
+\DeclareMathOperator\arccot{arccot}
+\DeclareMathOperator\arcsinh{arcsinh}
+\DeclareMathOperator\arccosh{arccosh}
+\DeclareMathOperator\arctanh{arctanh}
+\DeclareMathOperator\arcsech{arcsech}
+\DeclareMathOperator\arccsch{arccsch}
+\DeclareMathOperator\arccoth{arccoth}
+% sign function
+\DeclareMathOperator\sign{sign}
+% extremum functions
+\DeclareMathOperator*\argmin{arg\,min}
+\DeclareMathOperator*\argmax{arg\,max}
+% residue
+\DeclareMathOperator*\Res{Res}
+% matrix operators
+\DeclareMathOperator\Tr{Tr}
+\DeclareMathOperator\tr{tr}
+\DeclareMathOperator\diag{diag}
+\DeclareMathOperator\rank{rank}
+% big O notation
+\DeclareMathOperator\bigO O
+
+% generalized derivatives
+\newcommand*\DeclareDerivative[3]{
+  \bsc@ifstrcomp1{#3}
+    {\newcommand*#1[2]{\frac{#2##1}{#2##2}}}
+    {\newcommand*#1[2]{\frac{#2^{#3}##1}{#2##2^{#3}}}}
+}
+\newcommand*\DeclareSlashDerivative[3]{
+  \bsc@ifstrcomp1{#3}
+    {\newcommand*#1[2]{#2##1/#2##2}}
+    {\newcommand*#1[2]{#2^{#3}##1/#2##2^{#3}}}
+}
+\newcommand*\gd[4]{
+  \bsc@ifstrcomp1{#2}
+    {\frac{#1#3}{#1#4}}
+    {\frac{#1^{#2}#3}{#1{#4}^{#2}}}
+}
+% common bare derivatives
+\DeclareDerivative\od d1
+\DeclareDerivative\odd d2
+\DeclareSlashDerivative\ods d1
+\DeclareSlashDerivative\odds d2
+\DeclareDerivative\pd\partial1
+\DeclareDerivative\pdd\partial2
+\DeclareSlashDerivative\pds\partial1
+\DeclareSlashDerivative\pdds\partial2
+% common derivatives in parentheses
+\newcommand*\bsc@dpwrapper[4]{
+  \biggl(#1{#2}{#3}\biggr)_{\mkern-\thickmuskip\smash{#4}}}
+\newcommand*\bsc@dpswrapper[4]{(#1{#2}{#3})_{#4}}
+\newcommand*\pdp{\bsc@dpwrapper\pd}
+\newcommand*\pddp{\bsc@dpwrapper\pdd}
+\newcommand*\pdps{\bsc@dpswrapper\pds}
+\newcommand*\pddps{\bsc@dpswrapper\pdds}
+\newcommand*\pddm[3]{\frac{\partial^2#1}{\partial#2\,\partial#3}}
+% time derivatives
+\let\dt\dot
+\let\ddt\ddot
+
+% integral sign
+\newcommand*\multint{\mskip-2\thickmuskip\int}
+
+% vectors and matrices
+\newcommand*\bsc@boldsymbol[1]{\boldsymbol{\mathrm{#1}}}
+\let\vec\bsc@boldsymbol
+\newcommand*\uvec[1]{\hat{\bsc@boldsymbol{#1}}}
+\let\mat\bsc@boldsymbol
+\let\tsr\mat
+% superscripts
+\newcommand*\conj{^*}
+\newcommand*\trsp{^\su T}
+\newcommand*\inv{^{-1}}
+% vector operators
+\renewcommand*\dot{\neghairspace\cdot\neghairspace}
+\newcommand*\cross{\neghairspace\times\neghairspace}
+\DeclarePairedDelimiterX\inprod[2]\langle\rangle{#1,#2}
+% differential operators
+\let\grad\nabla
+\newcommand*\curl{\nabla\cross{}}
+\renewcommand*\div{\nabla\dot{}}
+\newcommand*\lapl{\nabla^2}
+
+% algebras
+\let\linmap\inprod
+\newcommand*\form[1]{\tilde{\bsc@boldsymbol{#1}}}
+\newcommand*\extalg[2]{\smash{\textstyle\bigwedge}^{\mskip-\thinmuskip#1}(#2)}
+\newcommand*\lie{\operatorname{\mathcal L}_}
+\newcommand*\ad{\operatorname{ad}_}
+\newcommand*\dual{\mathord*\hairspace}
+% simple tensors
+\newcommand*\krons{\delta_}
+\newcommand*\levis{\epsilon_}
+\newcommand*\pards{\partial_}
+
+% left and right fix
+% (http://tex.stackexchange.com/questions/2607/spacing-around-left-and-right)
+\let\bsc@left\left
+\let\bsc@right\right
+\renewcommand*\left{\mathopen{}\mathclose\bgroup\bsc@left}
+\renewcommand*\right{\aftergroup\egroup\bsc@right}
+% generalized paired delimiters
+\newcommand*\bsc@DeclarePairedDelimiter[3]{
+  \DeclarePairedDelimiter#1#2#3
+  \reDeclarePairedDelimiterInnerWrapper#1{nostar}{##1##2##3}
+}
+\bsc@DeclarePairedDelimiter\paren()
+\bsc@DeclarePairedDelimiter\abs\lvert\rvert
+\bsc@DeclarePairedDelimiter\norm\lVert\rVert
+\bsc@DeclarePairedDelimiter\mean\langle\rangle
+\bsc@DeclarePairedDelimiter\floor\lfloor\rfloor
+\bsc@DeclarePairedDelimiter\ceil\lceil\rceil
+\bsc@DeclarePairedDelimiter\evalb[]
+\DeclareRobustCommand\evalv{\@ifstar\bsc@evalvstar\bsc@evalvnostar}
+\newcommand*\bsc@evalvstar[1]{\left.#1\right\rvert}
+\newcommand*\bsc@evalvnostar[2][]{\bsc@ifempty{#1}{}{#1.}#2#1\rvert}
+
+% generalized functions
+\DeclareRobustCommand\dfunc{\@ifstar\bsc@dfuncbig\bsc@dfuncsmall}
+\newcommand*\bsc@dfuncbig[1][]{
+  \operatorname\delta\bsc@ifempty{#1}{}{^{(#1)}}\paren*}
+\newcommand*\bsc@dfuncsmall[1][]{
+  \operatorname\delta\bsc@ifempty{#1}{}{^{(#1)}}\paren}
+\newcommand*\step{\operatorname\vartheta\paren}
+
+% text in mathematics
+\newcommand*\const{\textnormal{constant}}
+\newcommand*\mcomma{\textnormal,\mathpunct{\quad}}
+\newcommand*\mshort[1]{\quad\textnormal{#1}\mathpunct{\quad}}
+\newcommand*\mcond[1]{\quad\textnormal{#1}}
+\newcommand*\mlabel[1]{\textnormal{#1}\mathpunct{\quad}}
+\newcommand*\mclause[1]{\quad\textnormal{#1}\mathpunct{\mskip3\thickmuskip}}
+\newcommand*\mlist[1]{\bsc@mlistfirst#1,\@nil,}
+\def\bsc@mlistfirst#1,#2,{#1\ifnot@nil#2{\bsc@mlistitem#2,}}
+\def\bsc@mlistitem#1,#2,{%
+  \def\@tempa{#2}\ifx\@tempa\@nnil
+    \bsc@mlistand#1%
+  \else
+    \bsc@mlistcomma#1\bsc@afterfi\bsc@mlistitem#2,%
+  \fi}
+\newcommand*\bsc@mlistcomma{,\ }
+\newcommand*\bsc@mlistand{\textnormal{ and }}
+% upright text in superscripts and subscripts
+\let\su\textup
+\newcommand*\DeclareScript[1]{\@namedef{#1}{\su{#1}}}
+
+% centering in table
+\newcommand*\centered{\multicolumn1c}
+
+% three-dot horizontal rule
+\newcommand\drule{%
+  \vskip1ex\noindent\begingroup\centering$\vcenter{
+    \vrule\@width.25ex\@height.25ex\kern1em\vrule\@width.25ex\@height.25ex
+    \kern1em\vrule\@width.25ex\@height.25ex
+  }$\endgroup\vskip1ex\relax
+}
+
+% overlapping boxes
+\newcommand*\tlap[1]{\vbox to\z@{\vss#1}}
+\newcommand*\blap[1]{\vbox to\z@{#1\vss}}
+\newcommand*\vclap[1]{\vbox to\z@{\vss#1\vss}}
+
+% display short skip fix
+\AtBeginDocument{
+  \abovedisplayshortskip.75\abovedisplayskip
+  \belowdisplayshortskip.75\belowdisplayskip}
+% spacing reduction in cases
+\renewcommand*\env@cases{
+  \let\@ifnextchar\new@ifnextchar
+  \left\lbrace\def\arraystretch{1}\array{@{}l@{\quad}l@{}}}
+% multline fix
+% (http://www.tug.org/pipermail/texhax/2007-August/008910.html)
+\bsc@append\measuring@true{\everycr{}}
+% aligned and multlined fix
+\bsc@prepend\aligned\negthinspace
+\bsc@prepend\multlined\negthinspace
