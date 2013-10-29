@@ -1,142 +1,187 @@
 % preamble
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{tensor}[2012/06/15 Tensorial indices]
+\ProvidesPackage{tensor}[2013/10/29 Tensorial indices]
 
-% spacer between sequences of indices
-\newcommand*\tsr@spacer{\mkern-1mu\vphantom{bq}}
+% features:
+%   aligns superscripts and subscripts across kernels
+%   allows long scripts to be written without braces
+%   handles nested tensors (kernels which are tensors themselves)
+%   handles primes in kernels, even for nested kernels
+% terminology:
+%   kernel:  first part of a tensor to which scripts are attached
+%   scripts: superscripts and subscripts
 
-% struts
+% spacer to prevent TeX from complaining about multiple consecutive scripts
+% \copy\@tempboxa could be added inside \vphantom; this makes scripts appear
+% properly on large kernels but messes up script alignment across kernels
+\newcommand*\tsr@spacer{\kern-\scriptspace{\vphantom{bq}}}
+
+% struts fixing the size of scripts (currently disabled)
 \newcommand*\tsr@strutu{{}}
 \newcommand*\tsr@strutd{{}}
-% superscript and subscript characters used only for struts
-\let\tsr@strutsp^
-\let\tsr@strutsb_
 
-% utility macros
+% store output to a token list
 \newcommand*\tsr@output{\addto@hook\@temptokena}
-\newcommand*\tsr@aroundone[2]{#1{#2}}
-\newcommand*\tsr@aroundtwo[3]{#1{#2#3}}
+% apply #1 to the following arguments
+\newcommand*\tsr@applyone[2]{#1{#2}}
+\newcommand*\tsr@applytwo[3]{#1{#2#3}}
+% branch depending on whether #1 is empty
 \newcommand*\tsr@ifempty[3]{\ifx\@empty#1\@empty#2\else#3\fi}
 
-% index-scanner state
+% spaces are unimportant since it is supposed to expand in math mode
+
+\begingroup\catcode`'\active
+  % main tensor macro
+  \gdef\tensor#1#2{\begingroup
+    % clean \@temptokena
+    \@temptokena{}
+    \begingroup
+      % start scanning for scripts after the kernel is processed
+      \aftergroup\tsr@scanscript
+      % scan for primes in the kernel and duplicate them after \endgroup
+      \tsr@scanprime#1\@nil
+      % set prime-free kernel in a box for possible reuse
+      \begingroup\def'{}\global\setbox\@tempboxa\hbox{$#1$}\endgroup
+      % typeset kernel
+      \copy\@tempboxa\kern\scriptspace\tsr@spacer
+    % primes end up after \endgroup; start scanning for scripts
+    \endgroup#2\@nil
+  \endgroup}
+\endgroup
+
+% scan for primes
+\def\tsr@scanprime#1{
+  \def\@tempa{#1}
+  % exit if the sentinel is seen
+  \ifx\@tempa\@nnil\else
+    % put a prime after \endgroup for every prime seen on the top level
+    \ifx\@tempa\tsr@prime\aftergroup'\fi
+    % continue scanning
+    \expandafter\tsr@scanprime
+  \fi
+}
+
+% symbols checked against in the script scanner
+\newcommand*\tsr@sup{^}
+\newcommand*\tsr@sub{_}
+\newcommand*\tsr@prime{'}
+
+% script scanner state
 %   state 0: no script
 %   state 1: dangling superscript
 %   state 2: dangling subscript
 %   state 3: dangling prime
-%   state 4: subscript under prime
+%   state 4: subscript under previous prime
+%            (prime following a subscript is not added above the subscript)
 \newcount\tsr@state
 
-% prime character (not the plain TeX macro)
-\let\tsr@prime'
-
-% main tensor macro
-% detects primes in the kernel and moves them to the index part
-\begingroup\catcode`'\active
-  \gdef\tensor#1#2{
-    \begingroup
-      \def\@tempa{{\begingroup\def'{}#1\endgroup}}
-      \begingroup
-        \def'{\g@addto@macro\@tempa\tsr@prime}
-        \setbox\@tempboxa\hbox{\ensuremath{#1}}
-      \endgroup
-      \@temptokena{}
-      \expandafter\tsr@scan\@tempa#2\tsr@end
-    \endgroup
-  }
-\endgroup
-
-% index scanner
-\newcommand*\tsr@scan[1]{
-  \ifx^#1
+% scan for scripts using a finite-state machine
+% usually no action is performed when the next state can be considered as a
+% continuation of the current state
+\newcommand*\tsr@scanscript[1]{
+  \def\@tempa{#1}
+  % choose the next state depending on the next token
+  \ifx\@tempa\tsr@sup
+    % start a superscript, closing dangling scripts if necessary
+    % considered a continuation of state 1
     \ifcase\tsr@state
       \tsr@output{^\bgroup}
     \or\or
-      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu\tsr@spacer^\bgroup}
+      \tsr@output{\tsr@strutd\egroup^\tsr@strutu\tsr@spacer^\bgroup}
     \or
-      \tsr@output{\tsr@spacer^\bgroup}
+      \tsr@output{\tsr@strutu\egroup\tsr@spacer^\bgroup}
     \or
       \tsr@output{\tsr@strutd\egroup\tsr@spacer^\bgroup}
     \fi
     \tsr@state1
-  \else\ifx_#1
+  \else\ifx\@tempa\tsr@sub
+    % start a subscript, closing dangling scripts if necessary
+    % considered a continuation of states 2 and 4
     \ifcase\tsr@state
       \tsr@output{_\bgroup}
     \or
-      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd\tsr@spacer_\bgroup}
+      \tsr@output{\tsr@strutu\egroup_\tsr@strutd\tsr@spacer_\bgroup}
     \or\or
-      \tsr@output{_\bgroup}
-    \or
-      \tsr@output{\tsr@strutd\egroup\tsr@spacer_\bgroup}
+      \tsr@output{\tsr@strutu\egroup_\bgroup}
     \fi
-    \ifnum\tsr@state=3
-      \tsr@state4
-    \else
-      \tsr@state2
-    \fi
-  \else\ifx'#1
+    % states 3 and 4 go to state 4, others go to state 2
+    \expandafter\tsr@state\ifcase\tsr@state2\or2\or2\or4\or4\fi
+  \else\ifx\@tempa\tsr@prime
+    % start a superscript prime, closing dangling scripts if necessary
+    % considered a continuation of state 3
     \ifcase\tsr@state
-      \tsr@output{'}
+      \tsr@output{^\bgroup\prime}
     \or
-      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd\tsr@spacer'}
+      \tsr@output{\tsr@strutu\egroup_\tsr@strutd\tsr@spacer^\bgroup\prime}
     \or
-      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu\tsr@spacer'}
+      \tsr@output{\tsr@strutd\egroup^\tsr@strutu\tsr@spacer^\bgroup\prime}
     \or
-      \tsr@output{'}
+      \tsr@output{\prime}
     \or
-      \tsr@output{\tsr@strutd\egroup\tsr@spacer'}
+      \tsr@output{\tsr@strutd\egroup\tsr@spacer^\bgroup\prime}
     \fi
     \tsr@state3
-  \else\ifx\tsr@end#1
+  \else\ifx\@tempa\@nnil
+    % close dangling scripts
     \ifcase\tsr@state\or
-      \tsr@output{\tsr@strutu\egroup\tsr@strutsb\tsr@strutd}
+      \tsr@output{\tsr@strutu\egroup_\tsr@strutd}
     \or
-      \tsr@output{\tsr@strutd\egroup\tsr@strutsp\tsr@strutu}
-    \or\or
+      \tsr@output{\tsr@strutd\egroup^\tsr@strutu}
+    \or
+      \tsr@output{\tsr@strutu\egroup}
+    \or
       \tsr@output{\tsr@strutd\egroup}
     \fi
     \tsr@state0
   \else
+    % all other tokens are output directly
     \tsr@output{#1}
   \fi\fi\fi\fi
-  \ifx\tsr@end#1
+  \ifx\@tempa\@nnil
     \the\@temptokena
   \else
-    \expandafter\tsr@scan
+    \expandafter\tsr@scanscript
   \fi
 }
 
-% tensor prototypes
+% tensor prototypes ('u' for superscript, 'd' for subscript)
 \newcommand*\tsr@tensoru[2]{\tsr@ifempty{#2}{#1}{\tensor{#1}{^{#2}}}}
 \newcommand*\tsr@tensord[2]{\tsr@ifempty{#2}{#1}{\tensor{#1}{_{#2}}}}
 \newcommand*\tsr@tensorud[3]{\tsr@ifempty{#2#3}{#1}{\tensor{#1}{^{#2}_{#3}}}}
 \newcommand*\tsr@tensordu[3]{\tsr@ifempty{#2#2}{#1}{\tensor{#1}{_{#2}^{#3}}}}
 
-% commands for declaring tensors
+% macros for declaring tensors
+
+% define a simple tensor macro with one or two arguments
+% the macro outputs a tensor with its argument(s) enclosed in a single
+% subscript (normal) or superscript (starred)
+% #1 is the macro name, #2 is the kernel, #3 is the number of macro arguments
 \newcommand*\DeclareSimpleTensor[3]{
   \ifcase#3
   \or
     \DeclareRobustCommand#1{\@ifstar
-      {\tsr@aroundone{\tsr@tensoru{#2}}}
-      {\tsr@aroundone{\tsr@tensord{#2}}}%
-    }    
+      {\tsr@applyone{\tsr@tensoru{#2}}}
+      {\tsr@applyone{\tsr@tensord{#2}}}}
   \or
     \DeclareRobustCommand#1{\@ifstar
-      {\tsr@aroundtwo{\tsr@tensoru{#2}}}
-      {\tsr@aroundtwo{\tsr@tensord{#2}}}%
-    }
+      {\tsr@applytwo{\tsr@tensoru{#2}}}
+      {\tsr@applytwo{\tsr@tensord{#2}}}}
   \fi
 }
+% define a tensor with superscript then subscript (normal) or subscript then
+% superscript (starred)
 \DeclareRobustCommand\DeclareMixedTensor{
   \@ifstar\tsr@declaretensordu\tsr@declaretensorud
 }
 \newcommand*\tsr@declaretensorud[2]{\newcommand*#1{\tsr@tensorud{#2}}}
 \newcommand*\tsr@declaretensordu[2]{\newcommand*#1{\tsr@tensordu{#2}}}
+% define a tensor that is semantically an operator (e.g. a partial derivative)
+% but typesets as a normal tensor
 \newcommand*\DeclareTensorOperator[2]{
   \DeclareRobustCommand#1{\@ifstar{\tsr@tensoru{#2}}{\tsr@tensord{#2}}}
 }
 
-% predefined tensors
-\DeclareSimpleTensor\basis{\vec e}1
+% predefined simple tensors
 \DeclareSimpleTensor\kron\delta1
 \DeclareSimpleTensor\metric g2
 \DeclareSimpleTensor\emetric\delta2
@@ -146,19 +191,39 @@
 \DeclareSimpleTensor\ricci R2
 \DeclareSimpleTensor\einst G2
 
+% predefined mixed tensors
 \DeclareMixedTensor\kronm\delta
 \DeclareMixedTensor\jacob J
 \DeclareMixedTensor*\invjacob{\smash{\tilde J}}
 \DeclareMixedTensor\lorentz\Lambda
 \DeclareMixedTensor*\invlorentz{\smash{\tilde\Lambda}}
 
+% predefined tensor operators
 \DeclareTensorOperator\pard\partial
 
-% special tensors
+% special tensors not following the prototypes above
+
+% respect existing definitions of \vec and \form, otherwise use generic bold
+\@ifundefined{vec}{\let\tsr@vec\mathbf}{\let\tsr@vec\vec}
+\@ifundefined{form}{\let\tsr@form\mathbf}{\let\tsr@form\form}
+
+% basis vector with subscript (normal) or basis form with superscript (starred)
+\newcommand*\basis{\@ifstar\tsr@basisu\tsr@basisd}
+\newcommand*\tsr@basisd{\tsr@tensord{\tsr@vec e}}
+\newcommand*\tsr@basisu{\tsr@tensoru{\tsr@form e}}
+
+% Christoffel symbol
 \newcommand*\chrsym[3]{\tsr@tensorud\Gamma{#1}{#2#3}}
+
+% Riemann tensor with one superscript and three subscripts (normal) or four
+% subscripts (starred)
 \DeclareRobustCommand\riemann{\@ifstar\tsr@riemannd\tsr@riemannud}
 \newcommand*\tsr@riemannud[4]{\tsr@tensorud R{#1}{#2#3#4}}
 \newcommand*\tsr@riemannd[4]{\tsr@tensord R{#1#2#3#4}}
+
+% covariant derivative with subscript (normal) or superscript (starred)
+% spacing is slightly tightened for the subscript case
 \DeclareRobustCommand\covd{\@ifstar\tsr@covdu\tsr@covdd}
-\newcommand*\tsr@covdd[1]{\tsr@tensord\nabla{\mkern-3mu#1}\mkern1mu}
+\newcommand*\tsr@covdd[1]{
+  \tsr@tensord\nabla{\mkern-3mu\relax#1}\mkern1mu\relax}
 \newcommand*\tsr@covdu[1]{\tsr@tensoru\nabla{#1}}
